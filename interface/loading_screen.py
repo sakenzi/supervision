@@ -1,5 +1,6 @@
 from PyQt6.QtCore import QTimer
 
+
 class LoadingScreen:
     def __init__(self, parent):
         self.parent = parent
