@@ -1,76 +1,60 @@
 import time
 import psutil
-from pynput import mouse, keyboard
 from threading import Thread
-
+import pygetwindow as gw
 
 class UserMonitor:
     def __init__(self):
         self.running = False
         self.processes = set()
-        self.mouse_listener = None
-        self.keyboard_listener = None
+        self.last_site = None
 
     def log_action(self, message):
         print(f"{time.ctime()}: {message}")
 
-    def monitor_processes(self):
+    def monitor_browser_activity(self):
         while self.running:
-            current_processes = {p.info["name"] for p in psutil.process_iter(['name'])}
-            new_processes = current_processes - self.processes
+            try:
+                active_window = gw.getActiveWindow()
+                if active_window:
+                    window_title = active_window.title.strip()  
+                    
+                    for proc in psutil.process_iter(['name']):
+                        proc_name = proc.info['name'].lower()
+                        if "chrome" in proc_name:
+                            browser = "Google Chrome"
+                        elif "msedge" in proc_name:
+                            browser = "Microsoft Edge"
+                        elif "firefox" in proc_name:
+                            browser = "Firefox"
+                        else:
+                            continue
 
-            for proc in new_processes:
-                if proc:
-                    self.log_action(f"Starting program: {proc}")
-
-            closed_processes = self.processes - current_processes
-            for proc in closed_processes:
-                if proc:
-                    self.log_action(f"Closed program: {proc}")
-
-            self.processes = current_processes
-            time.sleep(1)
-    
-    def on_click(self, x, y, button, pressed):
-        if pressed:
-            self.log_action(f"Клик мыши: {button} на позиции ({x}, {y})")
-
-    def on_scroll(self, x, y, dx, dy):
-        self.log_action(f"Прокрутка мыши: ({dx}, {dy}) на позиции ({x}, {y})")
-
-    def on_press(self, key):
-        try:
-            self.log_action(f"Нажата клавиша: {key.char}")
-        except AttributeError:
-            self.log_action(f"Нажата специальная клавиша: {key}")
-
-    def on_release(self, key):
-        pass
+                        if window_title and window_title != self.last_site and window_title != "":
+                            self.log_action(f"Зашёл: {window_title}")
+                            self.last_site = window_title
+                        break
+                else:
+                    self.last_site = None  
+            except Exception as e:
+                self.log_action(f"Ошибка при мониторинге: {e}")
+            
+            time.sleep(1)  
 
     def start(self):
         if not self.running:
             self.running = True
             self.processes = {p.info["name"] for p in psutil.process_iter(['name'])}
+            
+            self.log_action("Тестовый вывод: мониторинг начат")
 
-            process_thread = Thread(target=self.monitor_processes)
-            process_thread.daemon = True
-            process_thread.start()
+            browser_thread = Thread(target=self.monitor_browser_activity)
+            browser_thread.daemon = True
+            browser_thread.start()
 
-            self.mouse_listener = mouse.Listener(on_click=self.on_click, on_scroll=self.on_scroll)
-            self.mouse_listener.start()
-
-            self.keyboard_listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
-            self.keyboard_listener.start()
-
-            self.log_action("Start")
+            self.log_action("Мониторинг активности начат")
 
     def stop(self):
         if self.running:
             self.running = False
-            if self.mouse_listener:
-                self.mouse_listener.stop()
-            if self.keyboard_listener:
-                self.keyboard_listener.stop()
-            self.log_action("Stop")
-
-    
+            self.log_action("Мониторинг остановлен")
