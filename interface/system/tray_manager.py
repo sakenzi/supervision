@@ -12,8 +12,8 @@ class TrayManager:
 
     def setup_tray(self):
         tray_menu = QMenu()
-        show_action = QAction("Показать", self.parent)
-        quit_action = QAction("Выход", self.parent)
+        show_action = QAction("Көрсету", self.parent)
+        quit_action = QAction("Шығу", self.parent)
         show_action.triggered.connect(self.parent.show)
         quit_action.triggered.connect(self.quit_app)
         tray_menu.addAction(show_action)

@@ -1,12 +1,13 @@
 import time
-from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QPushButton, QGridLayout, QTextEdit
+from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QPushButton, QTextEdit
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPixmap, QPalette, QColor
+from PyQt6.QtGui import QPixmap
+from interface.window.fullescreen_image_window import FullScreenImageWindow
 
 class MonitoringWindow(QMainWindow):
     def __init__(self, username, code, close_callback):
         super().__init__()
-        self.setWindowTitle("Мониторинг")
+        self.setWindowTitle("Сынақ алаңы")
         self.setGeometry(150, 150, 800, 600)
         self.setStyleSheet("""
             QMainWindow {
@@ -20,7 +21,7 @@ class MonitoringWindow(QMainWindow):
         self.start_time = time.time()
         self.current_image_index = 0
         self.image_files = ["image/1.png", "image/2.png", "image/3.png"]  
-        
+
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.main_layout = QHBoxLayout(self.central_widget)
@@ -29,7 +30,7 @@ class MonitoringWindow(QMainWindow):
 
         left_layout = QVBoxLayout()
         left_layout.setSpacing(10)
-        
+
         self.timer_label = QLabel("Тайминг: 0 сек")
         self.timer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.timer_label.setStyleSheet("""
@@ -43,8 +44,8 @@ class MonitoringWindow(QMainWindow):
             }
         """)
         left_layout.addWidget(self.timer_label)
-        
-        self.wish_label = QLabel("Удачи в задачах!")
+
+        self.wish_label = QLabel("Сынақты жақсы тапсыруыңа тілектеспін студент!")
         self.wish_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.wish_label.setStyleSheet("""
             QLabel {
@@ -73,6 +74,8 @@ class MonitoringWindow(QMainWindow):
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             }
         """)
+        self.main_image_label.setMouseTracking(True)  
+        self.main_image_label.mousePressEvent = self.show_fullscreen_image  
         self.update_main_image()
         right_layout.addWidget(self.main_image_label)
 
@@ -98,7 +101,7 @@ class MonitoringWindow(QMainWindow):
         right_layout.addLayout(button_layout)
 
         self.notepad = QTextEdit()
-        self.notepad.setPlaceholderText("Введите заметки здесь...")
+        self.notepad.setPlaceholderText("Тапсырманы осы жерге орындаңыз...")
         self.notepad.setStyleSheet("""
             QTextEdit {
                 background-color: #FFFFFF;
@@ -115,7 +118,7 @@ class MonitoringWindow(QMainWindow):
         """)
         right_layout.addWidget(self.notepad)
 
-        self.close_button = QPushButton("Закрытие")
+        self.close_button = QPushButton("Аяқтау")
         self.close_button.setStyleSheet("""
             QPushButton {
                 background-color: #FF4040;
@@ -136,7 +139,7 @@ class MonitoringWindow(QMainWindow):
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_timer)
-        self.timer.start(1000)  
+        self.timer.start(1000)
 
     def update_main_image(self):
         if self.image_files and 0 <= self.current_image_index < len(self.image_files):
@@ -145,7 +148,13 @@ class MonitoringWindow(QMainWindow):
                 scaled_pixmap = pixmap.scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                 self.main_image_label.setPixmap(scaled_pixmap)
             else:
-                self.main_image_label.setText("Изображение не найдено")
+                self.main_image_label.setText("Сурет табылмады")
+
+    def show_fullscreen_image(self, event):
+        pixmap = QPixmap(self.image_files[self.current_image_index])
+        if not pixmap.isNull():
+            fullscreen_window = FullScreenImageWindow(pixmap, self)
+            fullscreen_window.exec()
 
     def switch_image(self, index):
         self.current_image_index = index

@@ -22,7 +22,7 @@ class MainWindow(QMainWindow):
         self.layout.setSpacing(15)
         self.layout.setContentsMargins(20, 20, 20, 20)
 
-        self.title_label = QLabel("Вход в систему")
+        self.title_label = QLabel("Сынақ алаңына өту")
         self.title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.title_label.setStyleSheet("""
             QLabel {
@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
         """)
         self.layout.addWidget(self.title_label)
 
-        self.username_label = QLabel("Имя пользователя:")
+        self.username_label = QLabel("Қолданушы аты-жөні:")
         self.username_label.setStyleSheet("""
             QLabel {
                 font-size: 16px;
@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
             }
         """)
         self.username_input = QLineEdit()
-        self.username_input.setPlaceholderText("Введите имя пользователя")
+        self.username_input.setPlaceholderText("Аты-жөніңізді жазыңыз:")
         self.username_input.setStyleSheet("""
             QLineEdit {
                 background-color: #FFFFFF;
@@ -70,7 +70,7 @@ class MainWindow(QMainWindow):
             }
         """)
         self.code_input = QLineEdit()
-        self.code_input.setPlaceholderText("Введите код")
+        self.code_input.setPlaceholderText("Кодты жазыңыз:")
         self.code_input.setStyleSheet("""
             QLineEdit {
                 background-color: #FFFFFF;
@@ -88,7 +88,7 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.code_label)
         self.layout.addWidget(self.code_input)
 
-        self.start_button = QPushButton("Начать")
+        self.start_button = QPushButton("Бастау")
         self.start_button.setStyleSheet("""
             QPushButton {
                 background-color: #1E90FF;
@@ -115,7 +115,7 @@ class MainWindow(QMainWindow):
         self.layout.addWidget(self.ip_label)
         self.layout.addWidget(self.pc_name_label)
 
-        self.loading_label = QLabel("Загрузка...")
+        self.loading_label = QLabel("Күтіңіз...")
         self.loading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.loading_label.setStyleSheet("""
             QLabel {
