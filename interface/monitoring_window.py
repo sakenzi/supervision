@@ -20,7 +20,7 @@ class MonitoringWindow(QMainWindow):
         self.start_time = time.time()
         self.current_image_index = 0
         self.image_files = ["image/1.png", "image/2.png", "image/3.png"]  
-
+        
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.main_layout = QHBoxLayout(self.central_widget)

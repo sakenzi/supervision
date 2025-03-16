@@ -7,6 +7,7 @@ from .loading_screen import LoadingScreen
 from .monitoring_window import MonitoringWindow
 from information.system_info import SystemInfo
 from information.user_monitor import UserMonitor
+from api.api_client import ApiClient
 
 class UI(MainWindow):
     def __init__(self):
@@ -18,16 +19,30 @@ class UI(MainWindow):
         self.info_display = SystemInfoDisplay(self.mac_label, self.ip_label, self.pc_name_label, self.sys_info)
         self.loading_screen = LoadingScreen(self)
         self.monitoring_window = None
+        self.api_client = ApiClient("http://localhost:8000/auth/client/login")
 
         self.start_button.clicked.connect(self.start_monitoring)
 
     def start_monitoring(self):
         self.username, self.code = self.get_inputs()
-        print(f"{time.ctime()}: Имя пользователя: {self.username}")
-        print(f"{time.ctime()}: Код: {self.code}")
 
-        self.info_display.show_system_info()
-        self.loading_screen.show(2000, self.finish_monitoring)
+        data = {
+            "code": self.code,
+            "ip_address": self.sys_info.get_ip_address(),
+            "mac_address": self.sys_info.get_mac_address(),
+            "username": self.username,
+            "device_name": self.sys_info.get_pc_name()
+        }
+
+        print(data)
+        if self.api_client.send_data(self, data):
+            print(f"{time.ctime()}: Имя пользователя: {self.username}")
+            print(f"{time.ctime()}: Код: {self.code}")
+
+            self.info_display.show_system_info()
+            self.loading_screen.show(2000, self.finish_monitoring)
+        else:
+            return
 
     def finish_monitoring(self):
         self.monitoring_window = MonitoringWindow(self.username, self.code, self.user_monitor.stop)
