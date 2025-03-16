@@ -1,10 +1,10 @@
 import time
 from PyQt6.QtCore import Qt
-from .main_window import MainWindow
-from .tray_manager import TrayManager
-from .system_info_display import SystemInfoDisplay
-from .loading_screen import LoadingScreen
-from .monitoring_window import MonitoringWindow
+from .window.main_window import MainWindow
+from .system.tray_manager import TrayManager
+from .system.system_info_display import SystemInfoDisplay
+from .system.loading_screen import LoadingScreen
+from .window.monitoring_window import MonitoringWindow
 from information.system_info import SystemInfo
 from information.user_monitor import UserMonitor
 from api.api_client import ApiClient
