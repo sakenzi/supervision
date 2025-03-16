@@ -2,7 +2,7 @@ import time
 from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QPushButton, QTextEdit
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap
-from interface.window.fullescreen_image_window import FullScreenImageWindow
+from interface.window.fullscreen_image_window import FullScreenImageWindow
 
 class MonitoringWindow(QMainWindow):
     def __init__(self, username, code, close_callback):
