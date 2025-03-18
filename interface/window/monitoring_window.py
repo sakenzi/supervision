@@ -3,6 +3,8 @@ from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QLab
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap, QKeyEvent
 from interface.window.fullscreen_image import FullScreenImageWindow
+from interface.window.ending_window import  ConfirmCloseWindow
+
 
 class MonitoringWindow(QMainWindow):
     def __init__(self, username, code, close_callback):
@@ -44,7 +46,7 @@ class MonitoringWindow(QMainWindow):
         """)
         left_layout.addWidget(self.timer_label)
 
-        self.wish_label = QLabel("Сынақты жақсы тапсырып шығуыңа тілектсепін студент!")
+        self.wish_label = QLabel("Сынақты жақсы тапсырып шығуыңа тілектеспін студент!")
         self.wish_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.wish_label.setStyleSheet("""
             QLabel {
@@ -111,6 +113,7 @@ class MonitoringWindow(QMainWindow):
             """)
             tab_layout.addWidget(title_label)
             self.titles.append(title_label)
+
             image_label = QLabel()
             image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             image_label.setStyleSheet("""
@@ -168,7 +171,7 @@ class MonitoringWindow(QMainWindow):
                 background-color: #CC0000;
             }
         """)
-        self.close_button.clicked.connect(self.close)
+        self.close_button.clicked.connect(self.on_close_clicked)
         right_layout.addWidget(self.close_button, alignment=Qt.AlignmentFlag.AlignRight)
 
         self.main_layout.addLayout(right_layout, 3)
@@ -176,6 +179,11 @@ class MonitoringWindow(QMainWindow):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_timer)
         self.timer.start(1000)
+
+    def on_close_clicked(self):
+        confirm_window = ConfirmCloseWindow(self)
+        if confirm_window.exec():
+            self.close()
 
     def show_fullscreen_image(self, event, index):
         print("Открываем FullScreenImageWindow")
