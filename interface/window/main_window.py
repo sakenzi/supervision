@@ -1,5 +1,7 @@
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit
 from PyQt6.QtCore import Qt
+from plyer import notification
+import os
 
 
 class MainWindow(QMainWindow):
@@ -105,6 +107,7 @@ class MainWindow(QMainWindow):
                 background-color: #0A3D62;
             }
         """)
+        self.start_button.clicked.connect(self.show_notification)  
         self.layout.addWidget(self.start_button)
 
         self.mac_label = QLabel()
@@ -138,4 +141,24 @@ class MainWindow(QMainWindow):
 
     def hide_loading(self):
         self.loading_label.setVisible(False)
-        self.central_widget.setEnabled(True)  
+        self.central_widget.setEnabled(True)   
+
+    def show_notification(self):
+        username, code = self.get_inputs()
+        if not username or not code:
+            notification.notify(
+                title="Қате",
+                message="Қолданушы аты-жөні және код толтырылуы керек!",
+                app_name="kӨz",
+                timeout=5,
+                app_icon=r'icon/eye-icon-4.png'
+            )
+        else:
+            notification.notify(
+                title="Студент сынақ басталды",
+                message="Ойланып, асықпай орындап шық!",
+                app_name="kӨz",
+                timeout=5,
+                app_icon=r'icon/eye-icon-4.png'
+            )
+            self.show_loading()  
