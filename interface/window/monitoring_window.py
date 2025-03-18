@@ -1,9 +1,8 @@
 import time
-from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QPushButton, QTextEdit
+from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QPushButton, QTextEdit, QTabWidget
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QKeyEvent
 from interface.window.fullscreen_image import FullScreenImageWindow
-
 
 class MonitoringWindow(QMainWindow):
     def __init__(self, username, code, close_callback):
@@ -20,12 +19,11 @@ class MonitoringWindow(QMainWindow):
 
         self.close_callback = close_callback
         self.start_time = time.time()
-        self.current_image_index = 0
         self.image_files = ["image/1.png", "image/2.png", "image/3.png"]  
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-        self.main_layout = QHBoxLayout(self.central_widget) 
+        self.main_layout = QHBoxLayout(self.central_widget)
         self.main_layout.setSpacing(20)
         self.main_layout.setContentsMargins(20, 20, 20, 20)
 
@@ -64,72 +62,97 @@ class MonitoringWindow(QMainWindow):
         right_layout = QVBoxLayout()
         right_layout.setSpacing(15)
 
-        tab_layout = QHBoxLayout()
-        tab_layout.setSpacing(2)
-        self.tab_buttons = []
-        for i in range(len(self.image_files)):
-            btn = QPushButton(str(i + 1))
-            btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #F0F0F0;
-                    color: #333333;
-                    border: 1px solid #D0D0D0;
-                    border-bottom: none;
-                    padding: 8px 15px;
-                    font-size: 14px;
-                    border-top-left-radius: 5px;
-                    border-top-right-radius: 5px;
-                }
-                QPushButton:hover {
-                    background-color: #E0E0E0;
-                }
-                QPushButton:checked {
-                    background-color: #FFFFFF;
-                    border-bottom: 1px solid #FFFFFF;
-                    font-weight: bold;
+        self.tab_widget = QTabWidget()
+        self.tab_widget.setStyleSheet("""
+            QTabWidget::pane {
+                border: 1px solid #E0E0E0;
+                border-radius: 0 0 10px 10px;
+                background-color: #FFFFFF;
+            }
+            QTabBar::tab {
+                background-color: #F0F0F0;
+                color: #333333;
+                border: 1px solid #D0D0D0;
+                border-bottom: none;
+                padding: 8px 15px;
+                font-size: 14px;
+                border-top-left-radius: 5px;
+                border-top-right-radius: 5px;
+            }
+            QTabBar::tab:selected {
+                background-color: #FFFFFF;
+                border-bottom: 1px solid #FFFFFF;
+                font-weight: bold;
+            }
+            QTabBar::tab:hover {
+                background-color: #E0E0E0;
+            }
+        """)
+        self.tab_widget.currentChanged.connect(self.switch_image)  
+
+        self.image_labels = []
+        self.notepads = []
+        self.titles = []
+        for i, image_path in enumerate(self.image_files):
+            tab_widget = QWidget()
+            tab_layout = QVBoxLayout(tab_widget)
+            tab_layout.setSpacing(10)
+
+            title_label = QLabel(f"Тақырып {i + 1}")
+            title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            title_label.setStyleSheet("""
+                QLAbel {
+                    background-color: #E8F0FE;
+                    radding: 5px;
+                    font-size: 16px;
+                    color: #1E90FF;
+                    border-bottom: 1px solid #E0E0E0;
                 }
             """)
-            btn.setCheckable(True)  
-            btn.setChecked(i == 0)  
-            btn.clicked.connect(lambda checked, idx=i: self.switch_image(idx))
-            tab_layout.addWidget(btn)
-            self.tab_buttons.append(btn)
-        right_layout.addLayout(tab_layout)
+            tab_layout.addWidget(title_label)
+            self.titles.append(title_label)
+            image_label = QLabel()
+            image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            image_label.setStyleSheet("""
+                QLabel {
+                    background-color: #FFFFFF;
+                    border: 1px solid #E0E0E0;
+                    border-radius: 5px;
+                    padding: 10px;
+                }
+            """)
+            image_label.setMouseTracking(True)
+            image_label.mousePressEvent = lambda event, idx=i: self.show_fullscreen_image(event, idx)
+            pixmap = QPixmap(image_path)
+            if not pixmap.isNull():
+                scaled_pixmap = pixmap.scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                image_label.setPixmap(scaled_pixmap)
+            else:
+                image_label.setText("Сурет табылмады")
+            tab_layout.addWidget(image_label)
+            self.image_labels.append(image_label)
 
-        self.main_image_label = QLabel()
-        self.main_image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.main_image_label.setStyleSheet("""
-            QLabel {
-                background-color: #FFFFFF;
-                border: 1px solid #E0E0E0;
-                border-top: none;
-                border-radius: 0 0 10px 10px;
-                padding: 10px;
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            }
-        """)
-        self.main_image_label.setMouseTracking(True)
-        self.main_image_label.mousePressEvent = self.show_fullscreen_image
-        self.update_main_image()
-        right_layout.addWidget(self.main_image_label)
+            notepad = QTextEdit()
+            notepad.setPlaceholderText("Тапсырма жауабын жазыңыз...")
+            notepad.setStyleSheet("""
+                QTextEdit {
+                    background-color: #FFFFFF;
+                    border: 1px solid #E0E0E0;
+                    border-radius: 8px;
+                    padding: 10px;
+                    font-size: 14px;
+                    color: #333333;
+                }
+                QTextEdit:focus {
+                    border: 1px solid #1E90FF;
+                }
+            """)
+            tab_layout.addWidget(notepad)
+            self.notepads.append(notepad)
 
-        self.notepad = QTextEdit()
-        self.notepad.setPlaceholderText("Тапсырма жауабын жазыңыз...")
-        self.notepad.setStyleSheet("""
-            QTextEdit {
-                background-color: #FFFFFF;
-                border: 1px solid #E0E0E0;
-                border-radius: 8px;
-                padding: 10px;
-                font-size: 14px;
-                color: #333333;
-            }
-            QTextEdit:focus {
-                border: 1px solid #1E90FF;
-                box-shadow: 0 0 5px rgba(30, 144, 255, 0.3);
-            }
-        """)
-        right_layout.addWidget(self.notepad)
+            self.tab_widget.addTab(tab_widget, str(i + 1))
+
+        right_layout.addWidget(self.tab_widget)
 
         self.close_button = QPushButton("Аяқтау")
         self.close_button.setStyleSheet("""
@@ -154,30 +177,26 @@ class MonitoringWindow(QMainWindow):
         self.timer.timeout.connect(self.update_timer)
         self.timer.start(1000)
 
-    def update_main_image(self):
-        if self.image_files and 0 <= self.current_image_index < len(self.image_files):
-            pixmap = QPixmap(self.image_files[self.current_image_index])
-            if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                self.main_image_label.setPixmap(scaled_pixmap)
-                for i, btn in enumerate(self.tab_buttons):
-                    btn.setChecked(i == self.current_image_index)
-            else:
-                self.main_image_label.setText("Сурет табылмады")
-
-    def show_fullscreen_image(self, event):
+    def show_fullscreen_image(self, event, index):
         print("Открываем FullScreenImageWindow")
-        pixmap = QPixmap(self.image_files[self.current_image_index])
+        pixmap = QPixmap(self.image_files[index])
         if not pixmap.isNull():
             fullscreen_window = FullScreenImageWindow(pixmap, self)
-            print("Экземпляр создан, вызываем exec")
+            print("Экземпляр создан, вызываем show")
             fullscreen_window.show()
         else:
             print("Ошибка: изображение не загружено")
 
     def switch_image(self, index):
-        self.current_image_index = index
-        self.update_main_image()
+        self.tab_widget.setCurrentIndex(index)
+
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key.Key_Tab and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            print("Ctrl+Tab нажат, переключаем вкладку")
+            current_index = self.tab_widget.currentIndex()
+            next_index = (current_index + 1) % self.tab_widget.count()
+            self.tab_widget.setCurrentIndex(next_index)
+        super().keyPressEvent(event)
 
     def update_timer(self):
         elapsed = int(time.time() - self.start_time)
