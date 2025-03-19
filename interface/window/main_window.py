@@ -144,21 +144,22 @@ class MainWindow(QMainWindow):
         self.central_widget.setEnabled(True)   
 
     def show_notification(self):
+        # icon_path = os.path.join(os.path.dirname(__file__), "icon", "icon/eye-icon-4.ico")
         username, code = self.get_inputs()
         if not username or not code:
             notification.notify(
                 title="Қате",
                 message="Қолданушы аты-жөні және код толтырылуы керек!",
                 app_name="kӨz",
-                timeout=5,
-                app_icon=r'icon/eye-icon-4.png'
+                timeout=7,
+                app_icon=r"icon/eye-icon-4.ico"
             )
         else:
             notification.notify(
                 title="Студент сынақ басталды",
                 message="Ойланып, асықпай орындап шық!",
                 app_name="kӨz",
-                timeout=5,
-                app_icon=r'icon/eye-icon-4.png'
+                timeout=7,
+                app_icon=r'icon/eye-icon-4.ico'
             )
             self.show_loading()  
