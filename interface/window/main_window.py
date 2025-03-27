@@ -4,7 +4,6 @@ import os
 import threading
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QPixmap
 import websocket
 import requests
 from interface.system.notification_manager import NotificationManager
