@@ -21,31 +21,10 @@ class UI(MainWindow):
         self.monitoring_window = None
         self.api_client = ApiClient("http://localhost:8000/auth/client/login")
 
-        self.start_button.clicked.connect(self.start_monitoring)
+        self.start_button.clicked.connect(self.start_process)
 
-    def start_monitoring(self):
-        self.username, self.code = self.get_inputs()
-
-        data = {
-            "code": self.code,
-            "ip_address": self.sys_info.get_ip_address(),
-            "mac_address": self.sys_info.get_mac_address(),
-            "username": self.username,
-            "device_name": self.sys_info.get_pc_name()
-        }
-
-        print(data)
-        if self.api_client.send_data(self, data):
-            print(f"{time.ctime()}: Имя пользователя: {self.username}")
-            print(f"{time.ctime()}: Код: {self.code}")
-
-            self.info_display.show_system_info()
-            self.loading_screen.show(2000, self.finish_monitoring)
-        else:
-            return
-
-    def finish_monitoring(self):
-        self.monitoring_window = MonitoringWindow(self.username, self.code, self.user_monitor.stop)
+    def open_monitoring_window(self):
+        self.monitoring_window = MonitoringWindow(self.task_data, self.image_path, self.user_monitor.stop)
         self.monitoring_window.show()
         self.user_monitor.start()
         self.hide()

@@ -1,8 +1,14 @@
+import base64
+import json
+import os
+import threading
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit
 from PyQt6.QtCore import Qt
-from plyer import notification
-import os
-
+from PyQt6.QtGui import QPixmap
+import websocket
+import requests
+from interface.system.notification_manager import NotificationManager
+from information.system_info import SystemInfo  
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -17,6 +23,11 @@ class MainWindow(QMainWindow):
                 border-radius: 10px;
             }
         """)
+
+        self.notification_manager = NotificationManager()
+        self.sys_info = SystemInfo()  
+        self.task_data = None  
+        self.image_path = None  
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -107,8 +118,20 @@ class MainWindow(QMainWindow):
                 background-color: #0A3D62;
             }
         """)
-        self.start_button.clicked.connect(self.show_notification)  
+        self.start_button.clicked.connect(self.start_process)
         self.layout.addWidget(self.start_button)
+
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_label.setStyleSheet("""
+            QLabel {
+                background-color: #FFFFFF;
+                border: 1px solid #E0E0E0;
+                border-radius: 8px;
+                padding: 10px;
+            }
+        """)
+        self.layout.addWidget(self.image_label)
 
         self.mac_label = QLabel()
         self.ip_label = QLabel()
@@ -137,29 +160,104 @@ class MainWindow(QMainWindow):
 
     def show_loading(self):
         self.loading_label.setVisible(True)
-        self.central_widget.setEnabled(False)  
+        self.central_widget.setEnabled(False)
 
     def hide_loading(self):
         self.loading_label.setVisible(False)
-        self.central_widget.setEnabled(True)   
+        self.central_widget.setEnabled(True)
 
-    def show_notification(self):
-        # icon_path = os.path.join(os.path.dirname(__file__), "icon", "icon/eye-icon-4.ico")
+    def show_notification(self, title, message):
+        self.notification_manager.show_notification(title, message)
+
+    def send_to_api(self, data):
+        try:
+            print(f"Отправляемые данные: {data}")
+            response = requests.post("http://localhost:8000/auth/client/login", json=data, timeout=5)
+            if response.status_code == 200:
+                print(f"Данные успешно отправлены на API: {response.status_code}")
+                self.show_notification("Сәтті", "Деректер API-ға сәтті жіберілді!")
+                return True
+            else:
+                print(f"Ошибка отправки данных на API: {response.status_code} - {response.text}")
+                self.show_notification("Қате", f"API-ға жіберу қатесі: {response.status_code}")
+                return False
+        except requests.exceptions.RequestException as e:
+            print(f"Ошибка отправки данных на API: {e}")
+            self.show_notification("Қате", "API-ға қосылу кезінде қате пайда болды!")
+            return False
+
+    def on_message(self, ws, message):
+        print(f"Получено сообщение от WebSocket: {message}")
+        try:
+            data = json.loads(message)
+            for key, value in data.items():
+                filename = value.get("filename")
+                base64_data = value.get("data")
+
+                if filename and base64_data:
+                    image_data = base64.b64decode(base64_data)
+
+                    image_dir = os.path.join(os.path.dirname(__file__), "..", "image")
+                    os.makedirs(image_dir, exist_ok=True)
+                    image_path = os.path.join(image_dir, filename)
+
+                    with open(image_path, "wb") as f:
+                        f.write(image_data)
+                    print(f"Изображение сохранено: {image_path}")
+
+                    self.task_data = data  
+                    self.image_path = image_path  
+
+                    self.show_notification("Сәтті", "Тапсырма сәтті қабылданды!")
+                    self.hide_loading()
+                    self.open_monitoring_window()  
+        except Exception as e:
+            print(f"Ошибка при обработке сообщения WebSocket: {e}")
+            self.show_notification("Қате", "Тапсырманы қабылдау кезінде қате пайда болды!")
+
+    def on_error(self, ws, error):
+        print(f"Ошибка WebSocket: {error}")
+        self.show_notification("Қате", "WebSocket қосылу кезінде қате пайда болды!")
+        self.hide_loading()
+
+    def on_close(self, ws, close_status_code, close_msg):
+        print(f"WebSocket жабылды: {close_status_code} - {close_msg}")
+        self.hide_loading()
+
+    def on_open(self, ws):
+        print("WebSocket қосылды")
+        self.show_notification("Сәтті", "WebSocket-қа сәтті қосылды!")
+
+    def start_process(self):
+        print("Метод start_process вызван")
         username, code = self.get_inputs()
         if not username or not code:
-            notification.notify(
-                title="Қате",
-                message="Қолданушы аты-жөні және код толтырылуы керек!",
-                app_name="kӨz",
-                timeout=7,
-                app_icon=r"icon/eye-icon-4.ico"
-            )
-        else:
-            notification.notify(
-                title="Студент сынақ басталды",
-                message="Ойланып, асықпай орындап шық!",
-                app_name="kӨz",
-                timeout=7,
-                app_icon=r'icon/eye-icon-4.ico'
-            )
-            self.show_loading()  
+            self.show_notification("Қате", "Қолданушы аты-жөні және код толтырылуы керек!")
+            return
+
+        data = {
+            "code": code,
+            "ip_address": self.sys_info.get_ip_address(),
+            "mac_address": self.sys_info.get_mac_address(),
+            "username": username,
+            "device_name": self.sys_info.get_pc_name()
+        }
+
+        if not self.send_to_api(data):
+            return
+
+        self.show_loading()
+
+        ws_url = "ws://172.20.10.5:8000/tasks/ws"
+        ws = websocket.WebSocketApp(
+            ws_url,
+            on_open=self.on_open,
+            on_message=self.on_message,
+            on_error=self.on_error,
+            on_close=self.on_close
+        )
+
+        threading.Thread(target=ws.run_forever, daemon=True).start()
+
+    def open_monitoring_window(self):
+        pass
