@@ -3,14 +3,17 @@ import json
 import os
 import threading
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QVBoxLayout, QWidget, QLabel, QLineEdit
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QPixmap
 import websocket
 import requests
 from interface.system.notification_manager import NotificationManager
-from information.system_info import SystemInfo  
+from information.system_info import SystemInfo
+import time
 
 class MainWindow(QMainWindow):
+    task_received = pyqtSignal(dict, list)
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("kӨz")
@@ -25,9 +28,10 @@ class MainWindow(QMainWindow):
         """)
 
         self.notification_manager = NotificationManager()
-        self.sys_info = SystemInfo()  
-        self.task_data = None  
-        self.image_path = None  
+        self.sys_info = SystemInfo()
+        self.task_data = None
+        self.image_path = []
+        self.is_processing = False
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -155,6 +159,8 @@ class MainWindow(QMainWindow):
         self.loading_label.setVisible(False)
         self.layout.addWidget(self.loading_label)
 
+        self.task_received.connect(self.handle_task_received)
+
     def get_inputs(self):
         return self.username_input.text(), self.code_input.text()
 
@@ -190,6 +196,7 @@ class MainWindow(QMainWindow):
         print(f"Получено сообщение от WebSocket: {message}")
         try:
             data = json.loads(message)
+            image_paths = []
             for key, value in data.items():
                 filename = value.get("filename")
                 base64_data = value.get("data")
@@ -197,42 +204,49 @@ class MainWindow(QMainWindow):
                 if filename and base64_data:
                     image_data = base64.b64decode(base64_data)
 
-                    image_dir = os.path.join(os.path.dirname(__file__), "..", "image")
+                    image_dir = os.path.join(os.path.dirname(__file__), "image")
                     os.makedirs(image_dir, exist_ok=True)
                     image_path = os.path.join(image_dir, filename)
 
                     with open(image_path, "wb") as f:
                         f.write(image_data)
                     print(f"Изображение сохранено: {image_path}")
+                    image_paths.append(image_path)
 
-                    self.task_data = data  
-                    self.image_path = image_path  
-
-                    self.show_notification("Сәтті", "Тапсырма сәтті қабылданды!")
-                    self.hide_loading()
-                    self.open_monitoring_window()  
+            self.task_received.emit(data, image_paths)
+        except json.JSONDecodeError as e:
+            print(f"Сообщение не является JSON: {message}")
         except Exception as e:
             print(f"Ошибка при обработке сообщения WebSocket: {e}")
             self.show_notification("Қате", "Тапсырманы қабылдау кезінде қате пайда болды!")
+            self.hide_loading()
 
     def on_error(self, ws, error):
         print(f"Ошибка WebSocket: {error}")
         self.show_notification("Қате", "WebSocket қосылу кезінде қате пайда болды!")
         self.hide_loading()
+        self.is_processing = False
 
     def on_close(self, ws, close_status_code, close_msg):
         print(f"WebSocket жабылды: {close_status_code} - {close_msg}")
         self.hide_loading()
+        self.is_processing = False
 
     def on_open(self, ws):
         print("WebSocket қосылды")
         self.show_notification("Сәтті", "WebSocket-қа сәтті қосылды!")
 
     def start_process(self):
+        if self.is_processing:
+            print("Процесс уже выполняется, игнорируем повторный вызов")
+            return
+
+        self.is_processing = True  
         print("Метод start_process вызван")
         username, code = self.get_inputs()
         if not username or not code:
             self.show_notification("Қате", "Қолданушы аты-жөні және код толтырылуы керек!")
+            self.is_processing = False
             return
 
         data = {
@@ -240,15 +254,18 @@ class MainWindow(QMainWindow):
             "ip_address": self.sys_info.get_ip_address(),
             "mac_address": self.sys_info.get_mac_address(),
             "username": username,
-            "device_name": self.sys_info.get_pc_name()
+            "device_info": self.sys_info.get_pc_name()
         }
-
-        if not self.send_to_api(data):
-            return
-
+        
         self.show_loading()
 
-        ws_url = "ws://172.20.10.5:8000/tasks/ws"
+        if not self.send_to_api(data):
+            self.hide_loading()
+            return
+
+        time.sleep(1)
+
+        ws_url = "ws://localhost:8000/tasks/ws"
         ws = websocket.WebSocketApp(
             ws_url,
             on_open=self.on_open,
@@ -258,6 +275,14 @@ class MainWindow(QMainWindow):
         )
 
         threading.Thread(target=ws.run_forever, daemon=True).start()
+
+    def handle_task_received(self, task_data, image_paths):
+        self.task_data = task_data
+        self.image_paths = image_paths  
+        self.show_notification("Сәтті", "Тапсырма сәтті қабылданды!")
+        self.hide_loading()
+        self.is_processing = False
+        self.open_monitoring_window()
 
     def open_monitoring_window(self):
         pass

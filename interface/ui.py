@@ -24,7 +24,7 @@ class UI(MainWindow):
         self.start_button.clicked.connect(self.start_process)
 
     def open_monitoring_window(self):
-        self.monitoring_window = MonitoringWindow(self.task_data, self.image_path, self.user_monitor.stop)
+        self.monitoring_window = MonitoringWindow(self.task_data, self.image_paths, self.user_monitor.stop)
         self.monitoring_window.show()
         self.user_monitor.start()
         self.hide()

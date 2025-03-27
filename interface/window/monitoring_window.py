@@ -1,12 +1,12 @@
 import time
-from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QPushButton, QTextEdit
+from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QWidget, QLabel, QPushButton, QTextEdit, QScrollArea
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap, QKeyEvent
 from interface.window.ending_window import ConfirmCloseWindow
 from interface.system.notification_manager import NotificationManager
 
 class MonitoringWindow(QMainWindow):
-    def __init__(self, task_data, image_path, close_callback):
+    def __init__(self, task_data, image_paths, close_callback):
         super().__init__()
         self.setWindowTitle("Сынақ алаңы")
         self.setGeometry(150, 150, 800, 600)
@@ -20,8 +20,8 @@ class MonitoringWindow(QMainWindow):
 
         self.close_callback = close_callback
         self.start_time = time.time()
-        self.task_data = task_data  
-        self.image_path = image_path  
+        self.task_data = task_data
+        self.image_paths = image_paths if isinstance(image_paths, list) else [image_paths]  
         self.notification_manager = NotificationManager()
 
         self.central_widget = QWidget()
@@ -81,24 +81,39 @@ class MonitoringWindow(QMainWindow):
         """)
         right_layout.addWidget(self.task_label)
 
-        self.image_label = QLabel()
-        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.image_label.setStyleSheet("""
-            QLabel {
+        self.image_scroll_area = QScrollArea()
+        self.image_scroll_area.setWidgetResizable(True)
+        self.image_container = QWidget()
+        self.image_layout = QVBoxLayout(self.image_container)
+        self.image_scroll_area.setWidget(self.image_container)
+        self.image_scroll_area.setStyleSheet("""
+            QScrollArea {
                 background-color: #FFFFFF;
                 border: 1px solid #E0E0E0;
                 border-radius: 5px;
-                padding: 10px;
             }
         """)
-        if self.image_path:
-            pixmap = QPixmap(self.image_path)
+
+        for image_path in self.image_paths:
+            image_label = QLabel()
+            image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            image_label.setStyleSheet("""
+                QLabel {
+                    background-color: #FFFFFF;
+                    border: 1px solid #E0E0E0;
+                    border-radius: 5px;
+                    padding: 10px;
+                }
+            """)
+            pixmap = QPixmap(image_path)
             if not pixmap.isNull():
                 scaled_pixmap = pixmap.scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                self.image_label.setPixmap(scaled_pixmap)
+                image_label.setPixmap(scaled_pixmap)
             else:
-                self.image_label.setText("Сурет табылмады")
-        right_layout.addWidget(self.image_label)
+                image_label.setText(f"Сурет табылмады: {image_path}")
+            self.image_layout.addWidget(image_label)
+
+        right_layout.addWidget(self.image_scroll_area)
 
         self.notepad = QTextEdit()
         self.notepad.setPlaceholderText("Тапсырма жауабын жазыңыз...")
